@@ -2,6 +2,9 @@ use std::{
     time::{
         Duration,
     },
+    thread::{
+        sleep,
+    },
     future::{
         Future,
     },
@@ -10,66 +13,47 @@ use std::{
             channel,
             Sender,
             Receiver,
-            SendError,
             TryRecvError,
         },
     },
+    ffi::{
+        c_void,
+    },
 };
 
-#[derive(Debug)]
-pub enum Error {
-    MessageSendError(SendError<()>)
-}
+use objc2::{
+    rc::{
+        Id,
+    },
+    ffi::{
+        objc_autoreleasePoolPush,
+        objc_autoreleasePoolPop,
+    },
+};
 
-impl From<SendError<()>> for Error {
-    fn from(err: SendError<()>) -> Self {
-        Self::MessageSendError(err)
-    }
-}
-
-#[derive(Debug)]
-pub struct StatusBar {
-}
-
-impl StatusBar {
-    pub fn system() -> Self {
-        todo!();
-    }
-
-    pub fn new_item(&self) -> &StatusItem {
-        todo!();
-    }
-
-    pub fn remove_item(&mut self, _: &StatusItem) {
-        todo!();
-    }
-}
+use icrate::{
+    Foundation::{
+        NSString,
+    },
+    AppKit::{
+        NSEvent,
+        NSApplication,
+        NSEventMaskAny,
+    },
+};
 
 #[derive(Debug)]
 pub struct StatusItem {
 }
 
 impl StatusItem {
-    pub fn bar(&self) -> Option<&StatusBar> {
-        todo!();
-    }
-
-    pub fn menu(&self) -> Option<&Menu> {
+    pub fn new(_: impl AsRef<str>, _: Menu) -> Self {
         todo!();
     }
 
     pub fn set_menu(&mut self, _: Menu) {
         todo!();
     }
-
-    pub fn title(&self) -> &str {
-        todo!();
-    }
-
-    pub fn set_title(&mut self, _: impl AsRef<str>) {
-        todo!();
-    }
-
 }
 
 #[derive(Debug)]
@@ -77,43 +61,7 @@ pub struct Menu {
 }
 
 impl Menu {
-    pub fn new() -> Self {
-        todo!();
-    }
-
-    pub fn item(&self, _: usize) -> &MenuItem {
-        todo!();
-    }
-
-    pub fn items(&self) -> Vec<&MenuItem> {
-        todo!();
-    }
-
-    pub fn set_items(&mut self, _: Vec<MenuItem>) {
-        todo!();
-    }
-
-    pub fn insert_item(&mut self, _: MenuItem, _: usize) {
-        todo!();
-    }
-
-    pub fn add_item(&mut self, _: MenuItem) {
-        todo!();
-    }
-
-    pub fn remove_item(&mut self, _: MenuItem) {
-        todo!();
-    }
-
-    pub fn remove_item_at(&mut self, _: usize) {
-        todo!();
-    }
-
-    pub fn remove_all_items(&mut self) {
-        todo!();
-    }
-
-    pub fn number_of_items(&self) -> usize {
+    pub fn new(_: Vec<MenuItem>) -> Self {
         todo!();
     }
 }
@@ -123,15 +71,7 @@ pub struct MenuItem {
 }
 
 impl MenuItem {
-    pub fn new<S, F>(_: S, _: Option<F>)
-        where
-            S: AsRef<str>,
-            F: Fn(&MenuItem),
-    {
-        todo!();
-    }
-
-    pub fn title(&self) -> &str {
+    pub fn new(_: impl AsRef<str>, _: Option<Box<dyn Fn(&MenuItem)>>, _: Option<Menu>) -> Self {
         todo!();
     }
 }
@@ -147,9 +87,8 @@ impl LoopTerminator {
         (Self { sender }, LoopTerminatee { receiver })
     }
 
-    pub fn terminate(&self) -> Result<(), Error> {
-        self.sender.send(())?;
-        Ok(())
+    pub fn terminate(&self) {
+        self.sender.send(()).unwrap();
     }
 }
 
@@ -168,14 +107,58 @@ impl LoopTerminatee {
     }
 }
 
-pub fn start_event_loop() -> LoopTerminator {
-    todo!();
+struct AutoReleasePoolContext(*mut c_void);
+unsafe impl Send for AutoReleasePoolContext { }
+
+macro_rules! event_loop {
+    ($terminatee: expr, $sleep: expr, $receiver_callback: expr) => {
+        unsafe {
+            let run_mode = NSString::from_str("kCFRunLoopDefaultMode");
+            {
+                let app = NSApplication::sharedApplication();
+                app.finishLaunching();
+            }
+            'event_loop: loop {
+                let pool_ctx = AutoReleasePoolContext(objc_autoreleasePoolPush());
+                for _ in 0..100 {
+                    {
+                        let app = NSApplication::sharedApplication();
+                        if $terminatee.should_terminate() {
+                            break 'event_loop;
+                        }
+
+                        $receiver_callback;
+
+                        let event: Option<Id<NSEvent>> = app.nextEventMatchingMask_untilDate_inMode_dequeue(NSEventMaskAny, None, &run_mode, true);
+                        if let Some(event) = event {
+                            app.sendEvent(&event);
+                        };
+                        app.updateWindows();
+                    }
+                    $sleep;
+                }
+                objc_autoreleasePoolPop(pool_ctx.0);
+            }
+        };
+    }
 }
 
-pub async fn async_event_loop<F>(_: LoopTerminatee, _: impl Fn(Duration) -> F)
+pub fn sync_event_loop<T>(receiver: Receiver<T>, callback: impl Fn(T)) -> (impl Fn(), LoopTerminator) {
+    let (terminator, terminatee) = LoopTerminator::new();
+    let f = move || {
+        event_loop!(terminatee, sleep(Duration::from_millis(10)), if let Ok(data) = receiver.try_recv() { callback(data) });
+    };
+    (f, terminator)
+}
+
+pub fn async_event_loop<F>(async_sleep: impl Fn(Duration) -> F) -> (impl Future<Output = ()> , LoopTerminator)
 where
-    F: Future<Output = ()>
+    F: Future<Output = ()>,
 {
-    todo!();
+    let (terminator, terminatee) = LoopTerminator::new();
+    let future = async move {
+        event_loop!(terminatee, async_sleep(Duration::from_millis(10)).await, ());
+    };
+    (future, terminator)
 }
 

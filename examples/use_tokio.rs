@@ -2,25 +2,44 @@ use std::{
     time::{
         Duration,
     },
+    cell::{
+        RefCell,
+    },
 };
 
 use system_status_bar_macos::{
-    Error,
-    LoopTerminator,
+    StatusItem,
+    Menu,
+    MenuItem,
     async_event_loop,
 };
 
+use tokio::{
+    time::{
+        sleep,
+    },
+};
+
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Error> {
-    let (terminator, terminatee) = LoopTerminator::new();
+async fn main() {
+    let (event_loop, terminator) = async_event_loop(sleep);
+    let event_loop = tokio::spawn(event_loop);
 
-    tokio::spawn(async {
-        async_event_loop(terminatee, tokio::time::sleep).await
-    });
+    let status_item = RefCell::new(StatusItem::new("EXAMPLE", Menu::new(vec![])));
 
-    tokio::time::sleep(Duration::from_secs(3)).await;
-    terminator.terminate()?;
+    for loop_count in 0..5 {
+        status_item.borrow_mut().set_menu(Menu::new(vec![
+                MenuItem::new(format!("Count: {}", loop_count), None, Some(Menu::new(vec![
+                        MenuItem::new("Sub menu", None, None),
+                ]))),
+                MenuItem::new(format!("Count: {}", loop_count), Some(Box::new(|_| {
+                    println!("Clicked");
+                })), None),
+        ]));
+        sleep(Duration::from_secs(1)).await;
+    }
 
-    Ok(())
+    terminator.terminate();
+    event_loop.await.unwrap();
 }
 
