@@ -1,0 +1,15 @@
+[package]
+name = "system_status_bar_macos"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+block2 = "0.2.0"
+icrate = { version = "0.0.3", features = ["Foundation_NSString", "apple", "unstable-static-nsstring", "Foundation", "Foundation_NSArray", "Foundation_all", "AppKit_all"] }
+objc2 = "0.4.0"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+
