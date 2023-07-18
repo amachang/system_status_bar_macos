@@ -35,6 +35,7 @@ fn main() {
     let (event_loop, terminator) = sync_event_loop(receiver, move |command| {
         match command {
             Command::Update(loop_count) => {
+                /*
                 status_item.borrow_mut().set_menu(Menu::new(vec![
                         MenuItem::new(format!("Count: {}", loop_count), None, Some(Menu::new(vec![
                                 MenuItem::new("Sub menu", None, None),
@@ -43,6 +44,7 @@ fn main() {
                             println!("Clicked");
                         })), None),
                 ]));
+                */
             },
         };
     });

@@ -37,37 +37,125 @@ use icrate::{
     },
     AppKit::{
         NSEvent,
+        NSStatusBar,
+        NSStatusItem,
+        NSMenu,
+        NSMenuItem,
         NSApplication,
         NSEventMaskAny,
+        NSVariableStatusItemLength,
     },
 };
 
 #[derive(Debug)]
 pub struct StatusItem {
+    inner: Id<NSStatusItem>,
+
+    menu: Menu,
+    title: String,
 }
 
 impl StatusItem {
-    pub fn new(_: impl AsRef<str>, _: Menu) -> Self {
-        todo!();
+    pub fn new(title: impl AsRef<str>, menu: Menu) -> Self {
+        let title = title.as_ref();
+        unsafe {
+            // initialize if not yet
+            NSApplication::sharedApplication();
+
+            let bar = NSStatusBar::systemStatusBar();
+            let inner = bar.statusItemWithLength(NSVariableStatusItemLength);
+
+            inner.setMenu(Some(&menu.inner));
+            inner.button().unwrap().setTitle(&NSString::from_str(title));
+
+            let title = title.to_string();
+            Self { inner, menu, title }
+        }
     }
 
-    pub fn set_menu(&mut self, _: Menu) {
-        todo!();
+    pub fn menu(&self) -> &Menu {
+        &self.menu
+    }
+
+    pub fn set_menu(&mut self, menu: Menu) {
+        unsafe {
+            self.inner.setMenu(Some(&menu.inner));
+            self.menu = menu;
+        }
+    }
+
+    pub fn title(&self) -> &str {
+        &self.title
+    }
+
+    pub fn set_title(&mut self, title: impl AsRef<str>) {
+        let title = title.as_ref();
+        unsafe {
+            self.inner.button().unwrap().setTitle(&NSString::from_str(title));
+            self.title = title.to_string();
+        }
     }
 }
+
+impl Drop for StatusItem {
+    fn drop(&mut self) {
+        unsafe {
+            self.inner.setMenu(None);
+
+            let bar = NSStatusBar::systemStatusBar();
+            bar.removeStatusItem(&self.inner);
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Menu {
+    inner: Id<NSMenu>,
+
+    items: Vec<MenuItem>,
 }
 
 impl Menu {
-    pub fn new(_: Vec<MenuItem>) -> Self {
-        todo!();
+    pub fn new(items: Vec<MenuItem>) -> Self {
+        unsafe {
+            let inner = NSMenu::new();
+
+            for item in &items {
+                inner.addItem(&item.inner);
+            }
+
+            Self { inner, items }
+        }
+    }
+
+    pub fn items(&self) -> &Vec<MenuItem> {
+        &self.items
+    }
+
+    pub fn set_items(&mut self, items: Vec<MenuItem>) {
+        unsafe {
+            self.inner.removeAllItems();
+            for item in &items {
+                self.inner.addItem(&item.inner);
+            }
+            self.items = items;
+        }
+    }
+}
+
+impl Drop for Menu {
+    fn drop(&mut self) {
+        unsafe {
+            self.inner.removeAllItems();
+            self.items = vec![];
+        }
     }
 }
 
 #[derive(Debug)]
 pub struct MenuItem {
+    inner: Id<NSMenuItem>,
 }
 
 impl MenuItem {
