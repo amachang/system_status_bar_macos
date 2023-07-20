@@ -1,3 +1,249 @@
+//! # system\_status\_bar\_macos
+//! 
+//! Library for interacting with the system's status bar for macOS.
+//! 
+//! ## Example 1: Hello, World!
+//! 
+//! ``` rust
+//! use system_status_bar_macos::*;
+//! use tokio::*;
+//! 
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() {
+//!     let _status_item = StatusItem::new("HELLO_WORLD", Menu::new(vec![]));
+//! 
+//!     spawn(async_infinite_event_loop(time::sleep)).await.unwrap();
+//! }
+//! ```
+//!
+//! without async runtime:
+//!
+//! ```rust
+//! use std::sync::mpsc::channel;
+//! use system_status_bar_macos::*;
+//! 
+//! fn main() {
+//!     let _status_item = StatusItem::new("HELLO_WORLD", Menu::new(vec![]));
+//! 
+//!     let (_sender, receiver) = channel::<()>();
+//!     sync_infinite_event_loop(receiver, |_| { }); 
+//! }
+//! ```
+//! 
+//! ## Example 2: Show CPU usage on the status bar
+//!
+//! ```rust
+//! use system_status_bar_macos::*;
+//! use sysinfo::*;
+//! use tokio::*;
+//! 
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() {
+//!     spawn(async_infinite_event_loop(time::sleep));
+//! 
+//!     let mut status_item = StatusItem::new("", Menu::new(vec![]));
+//!     loop {
+//!         let mut sys = System::new_all();
+//!         sys.refresh_all();
+//! 
+//!         status_item.set_title(format!("CPU Usage: {:3.2}%", sys.global_cpu_info().cpu_usage()));
+//!         time::sleep(time::Duration::from_secs(1)).await;
+//!     }
+//! }
+//! ```
+//! 
+//! without async runtime:
+//!
+//! ```rust
+//! use std::{
+//!     sync::mpsc::channel,
+//!     thread::*,
+//!     time::*,
+//!     cell::*,
+//! };
+//! use system_status_bar_macos::*;
+//! use sysinfo::*;
+//! 
+//! fn main() {
+//!     let (sender, receiver) = channel::<()>();
+//! 
+//!     // thread that sends command to event loop
+//!     spawn(move || {
+//!         loop {
+//!             sender.send(()).unwrap();
+//!             sleep(Duration::from_secs(1));
+//!         }
+//!     });
+//! 
+//!     let status_item = RefCell::new(StatusItem::new("", Menu::new(vec![])));
+//! 
+//!     sync_infinite_event_loop(receiver, move |_| {
+//!         let mut sys = System::new_all();
+//!         sys.refresh_all();
+//! 
+//!         status_item.borrow_mut().set_title(format!("CPU Usage: {:3.2}%", sys.global_cpu_info().cpu_usage()));
+//!     });
+//! }
+//! ```
+//!
+//! ## Example 3: Show menus (clickable, unclickable, and having submenus)
+//!
+//! ```rust
+//! use system_status_bar_macos::*;
+//! use tokio::*;
+//! 
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() {
+//!     let event_loop = spawn(async_infinite_event_loop(time::sleep));
+//! 
+//!     let _status_item = StatusItem::new("TITLE", Menu::new(vec![
+//!             MenuItem::new("UNCLICKABLE MENU", None, None),
+//!             MenuItem::new("CLICKABLE MENU", Some(Box::new(|| {
+//!                 println!("clicked!");
+//!             })), None),
+//!             MenuItem::new("PARENT MENU", None, Some(Menu::new(vec![
+//!                 MenuItem::new("SUBMENU", None, None),
+//!                 MenuItem::new("SUBMENU", None, None),
+//!             ]))),
+//!     ]));
+//! 
+//!     event_loop.await.unwrap();
+//! }
+//! ```
+//!
+//! without async runtime:
+//!
+//! ```rust
+//! use std::sync::mpsc::channel;
+//! use system_status_bar_macos::*;
+//! 
+//! fn main() {
+//!     let _status_item = StatusItem::new("TITLE", Menu::new(vec![
+//!             MenuItem::new("UNCLICKABLE MENU", None, None),
+//!             MenuItem::new("CLICKABLE MENU", Some(Box::new(|| {
+//!                 println!("clicked!");
+//!             })), None),
+//!             MenuItem::new("PARENT MENU", None, Some(Menu::new(vec![
+//!                 MenuItem::new("SUBMENU", None, None),
+//!                 MenuItem::new("SUBMENU", None, None),
+//!             ]))),
+//!     ]));
+//! 
+//!     let (_sender, receiver) = channel::<()>();
+//!     sync_infinite_event_loop(receiver, |_| { });
+//! }
+//! ```
+//!
+//! ## Example 4: Update menus
+//! 
+//! ```rust
+//! use system_status_bar_macos::*;
+//! use sysinfo::*;
+//! use tokio::*;
+//! 
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() {
+//!     spawn(async_infinite_event_loop(time::sleep));
+//! 
+//!     let mut status_item = StatusItem::new("", Menu::new(vec![]));
+//!     loop {
+//!         let mut sys = System::new_all();
+//!         sys.refresh_all();
+//! 
+//!         status_item.set_title(format!("CPU Usage: {:3.2}%", sys.global_cpu_info().cpu_usage()));
+//!         status_item.set_menu(Menu::new(vec![
+//!             MenuItem::new(format!("Used {} bytes memory", sys.used_memory()), None, None),
+//!             MenuItem::new(format!("Used {} bytes swap", sys.used_swap()), None, None),
+//!         ]));
+//!         time::sleep(time::Duration::from_secs(1)).await;
+//!     }
+//! }
+//! ```
+//!
+//! without async runtime
+//!
+//! ```rust
+//! use std::{
+//!     sync::mpsc::channel,
+//!     thread::*,
+//!     time::*,
+//!     cell::*,
+//! };
+//! use system_status_bar_macos::*;
+//! use sysinfo::*;
+//! 
+//! fn main() {
+//!     let (sender, receiver) = channel::<()>();
+//! 
+//!     // thread that sends command to event loop
+//!     spawn(move || {
+//!         loop {
+//!             sender.send(()).unwrap();
+//!             sleep(Duration::from_secs(1));
+//!         }
+//!     });
+//! 
+//!     let status_item = RefCell::new(StatusItem::new("", Menu::new(vec![])));
+//! 
+//!     sync_infinite_event_loop(receiver, move |_| {
+//!         let mut sys = System::new_all();
+//!         sys.refresh_all();
+//! 
+//!         status_item.borrow_mut().set_title(format!("CPU Usage: {:3.2}%", sys.global_cpu_info().cpu_usage()));
+//!         status_item.borrow_mut().set_menu(Menu::new(vec![
+//!             MenuItem::new(format!("Used {} bytes memory", sys.used_memory()), None, None),
+//!             MenuItem::new(format!("Used {} bytes swap", sys.used_swap()), None, None),
+//!         ]));
+//!     });
+//! }
+//! ```
+//!
+//! ## Example 5: Break event loop
+//!
+//! ```rust
+//! use system_status_bar_macos::*;
+//! use tokio::*;
+//! 
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() {
+//!     let (event_loop, terminator) = async_event_loop(time::sleep);
+//!     let event_loop = spawn(event_loop);
+//! 
+//!     let _status_item = StatusItem::new("EXAMPLE", Menu::new(vec![]));
+//!     time::sleep(time::Duration::from_secs(10)).await;
+//! 
+//!     terminator.terminate(); // break event loop
+//!
+//!     event_loop.await.unwrap();
+//! }
+//! ```
+//!
+//! without async runtime
+//!
+//! ```rust
+//! use std::{
+//!     sync::mpsc::channel,
+//!     thread::*,
+//!     time::*,
+//! };
+//! use system_status_bar_macos::*;
+//! 
+//! fn main() {
+//!     let _status_item = StatusItem::new("EXAMPLE", Menu::new(vec![]));
+//!     let (_sender, receiver) = channel::<()>();
+//!     let (event_loop, terminator) = sync_event_loop(receiver, |_| { });
+//! 
+//!     spawn(move || {
+//!         sleep(Duration::from_secs(10));
+//! 
+//!         terminator.terminate(); // break event loop
+//!     });
+//! 
+//!     event_loop();
+//! }
+//! ```
+//!
+
 use std::{
     time::{
         Duration,
@@ -294,7 +540,7 @@ pub struct LoopTerminator {
 }
 
 impl LoopTerminator {
-    pub fn new() -> (Self, LoopTerminatee) {
+    fn new() -> (Self, LoopTerminatee) {
         let (sender, receiver) = channel::<()>();
         (Self { sender }, LoopTerminatee { receiver })
     }
@@ -305,17 +551,27 @@ impl LoopTerminator {
 }
 
 #[derive(Debug)]
-pub struct LoopTerminatee {
+struct LoopTerminatee {
     receiver: Receiver<()>,
 }
 
 impl LoopTerminatee {
-    pub fn should_terminate(&self) -> bool {
+    fn should_terminate(&self) -> bool {
         match self.receiver.try_recv() {
             Ok(()) => true,
             Err(TryRecvError::Empty) => false,
             Err(TryRecvError::Disconnected) => true,
         }
+    }
+}
+
+#[derive(Debug)]
+struct NopLoopTerminatee {
+}
+
+impl NopLoopTerminatee {
+    fn should_terminate(&self) -> bool {
+        false
     }
 }
 
@@ -363,6 +619,11 @@ pub fn sync_event_loop<T>(receiver: Receiver<T>, callback: impl Fn(T)) -> (impl 
     (f, terminator)
 }
 
+pub fn sync_infinite_event_loop<T>(receiver: Receiver<T>, callback: impl Fn(T)) {
+    let terminatee = NopLoopTerminatee {  };
+    event_loop!(terminatee, sleep(Duration::from_millis(10)), if let Ok(data) = receiver.try_recv() { callback(data) });
+}
+
 pub fn async_event_loop<F>(async_sleep: impl Fn(Duration) -> F) -> (impl Future<Output = ()> , LoopTerminator)
 where
     F: Future<Output = ()>,
@@ -372,6 +633,17 @@ where
         event_loop!(terminatee, async_sleep(Duration::from_millis(10)).await, ());
     };
     (future, terminator)
+}
+
+pub fn async_infinite_event_loop<F>(async_sleep: impl Fn(Duration) -> F) -> impl Future<Output = ()>
+where
+    F: Future<Output = ()>,
+{
+    let terminatee = NopLoopTerminatee {  };
+    let future = async move {
+        event_loop!(terminatee, async_sleep(Duration::from_millis(10)).await, ());
+    };
+    future
 }
 
 #[cfg(test)]
