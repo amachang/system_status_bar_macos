@@ -1,10 +1,8 @@
 # system_status_bar_macos
 
-## system\_status\_bar\_macos
-
 Library for interacting with the system's status bar for macOS.
 
-### Example 1: Hello, World!
+## Example 1: Hello, World!
 
 ``` rust
 use system_status_bar_macos::*;
@@ -32,7 +30,7 @@ fn main() {
 }
 ```
 
-### Example 2: Show CPU usage on the status bar
+## Example 2: Show CPU usage on the status bar
 
 ```rust
 use system_status_bar_macos::*;
@@ -88,7 +86,7 @@ fn main() {
 }
 ```
 
-### Example 3: Show menus (clickable, unclickable, and having submenus)
+## Example 3: Show menus (clickable, unclickable, and having submenus)
 
 ```rust
 use system_status_bar_macos::*;
@@ -136,7 +134,7 @@ fn main() {
 }
 ```
 
-### Example 4: Update menus
+## Example 4: Update menus
 
 ```rust
 use system_status_bar_macos::*;
@@ -200,7 +198,7 @@ fn main() {
 }
 ```
 
-### Example 5: Break event loop
+## Example 5: Break event loop
 
 ```rust
 use system_status_bar_macos::*;
