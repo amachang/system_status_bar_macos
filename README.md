@@ -1,4 +1,4 @@
-# system_status_bar_macos
+# system\_status\_bar\_macos
 
 Library for interacting with the system's status bar for macOS.
 
@@ -8,13 +8,13 @@ Library for interacting with the system's status bar for macOS.
 use system_status_bar_macos::*;
 use tokio::*;
 
-##[tokio::main(flavor = "current_thread")]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let _status_item = StatusItem::new("HELLO_WORLD", Menu::new(vec![]));
 
     spawn(async_infinite_event_loop(time::sleep)).await.unwrap();
 }
-```rust
+```
 
 without async runtime:
 
