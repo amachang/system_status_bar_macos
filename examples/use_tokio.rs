@@ -28,16 +28,14 @@ async fn main() {
     let status_item = RefCell::new(StatusItem::new("EXAMPLE", Menu::new(vec![])));
 
     for loop_count in 0..5 {
-        /*
         status_item.borrow_mut().set_menu(Menu::new(vec![
                 MenuItem::new(format!("Count: {}", loop_count), None, Some(Menu::new(vec![
                         MenuItem::new("Sub menu", None, None),
                 ]))),
-                MenuItem::new(format!("Count: {}", loop_count), Some(Box::new(|_| {
+                MenuItem::new(format!("Count: {}", loop_count), Some(Box::new(|| {
                     println!("Clicked");
                 })), None),
         ]));
-        */
         sleep(Duration::from_secs(1)).await;
     }
 
