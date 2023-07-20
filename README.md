@@ -1,3 +1,4 @@
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/amachang/system_status_bar_macos/test.yml?label=test)
 ![docs.rs](https://img.shields.io/docsrs/system_status_bar_macos)
 ![Crates.io](https://img.shields.io/crates/l/system_status_bar_macos)
 ![Crates.io](https://img.shields.io/crates/d/system_status_bar_macos)
