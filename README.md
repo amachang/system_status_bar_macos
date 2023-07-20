@@ -1,3 +1,7 @@
+![docs.rs](https://img.shields.io/docsrs/system_status_bar_macos)
+![Crates.io](https://img.shields.io/crates/l/system_status_bar_macos)
+![Crates.io](https://img.shields.io/crates/d/system_status_bar_macos)
+
 # system\_status\_bar\_macos
 
 Library for interacting with the system's status bar for macOS, or more simply, the one for using `[NSStatusBar systemStatusBar]`.
