@@ -1,5 +1,7 @@
 //! Library for interacting with the system's status bar for macOS.
 //! 
+//! <img width="318" alt="screenshot" src="https://github.com/amachang/system_status_bar_macos/assets/10735/b3e2787b-77fe-4dd5-a560-6633042d5066">
+//! 
 //! # Example 1: Hello, World!
 //! 
 //! ``` rust

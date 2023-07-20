@@ -1,6 +1,6 @@
 [package]
 name = "system_status_bar_macos"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Library for interacting with the system's status bar for macOS"
 license = "MIT OR Apache-2.0"
