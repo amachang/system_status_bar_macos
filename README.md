@@ -1,7 +1,7 @@
-![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/amachang/system_status_bar_macos/test.yml?label=test)
-![docs.rs](https://img.shields.io/docsrs/system_status_bar_macos)
-![Crates.io](https://img.shields.io/crates/l/system_status_bar_macos)
-![Crates.io](https://img.shields.io/crates/d/system_status_bar_macos)
+[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/amachang/system_status_bar_macos/test.yml?label=test)](https://github.com/amachang/system_status_bar_macos/actions/workflows/test.yml)
+[![docs.rs](https://img.shields.io/docsrs/system_status_bar_macos)](https://docs.rs/system_status_bar_macos/latest/system_status_bar_macos/)
+[![Crates.io](https://img.shields.io/crates/l/system_status_bar_macos)](https://crates.io/crates/system_status_bar_macos)
+[![Crates.io](https://img.shields.io/crates/d/system_status_bar_macos)](https://crates.io/crates/system_status_bar_macos)
 
 # system\_status\_bar\_macos
 
