@@ -1,4 +1,4 @@
-//! Library for interacting with the system's status bar for macOS.
+//! Library for interacting with the system's status bar for macOS, or more simply, the one for using `[NSStatusBar systemStatusBar]`.
 //! 
 //! <img width="318" alt="screenshot" src="https://github.com/amachang/system_status_bar_macos/assets/10735/b3e2787b-77fe-4dd5-a560-6633042d5066">
 //! 
