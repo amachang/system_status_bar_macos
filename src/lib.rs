@@ -296,19 +296,12 @@ use objc2::{
 };
 
 use icrate::{
-    Foundation::{
-        NSString,
-    },
     AppKit::{
-        NSEvent,
-        NSStatusBar,
-        NSStatusItem,
-        NSMenu,
-        NSMenuItem,
-        NSApplication,
-        NSEventMaskAny,
+        NSApplication, NSControlStateValueMixed, NSControlStateValueOff, NSControlStateValueOn,
+        NSEvent, NSEventMaskAny, NSImage, NSMenu, NSMenuItem, NSStatusBar, NSStatusItem,
         NSVariableStatusItemLength,
     },
+    Foundation::NSString,
 };
 
 use block2::{
@@ -479,6 +472,19 @@ impl STBMenuItemCallback {
     }
 }
 
+/// See `NSControl.StateValue`
+#[derive(Debug)]
+pub enum MenuItemState {
+    /// A constant value that indicates a control is on or selected.
+    On,
+
+    /// A constant value that indicates a control is off or unselected.
+    Off,
+
+    /// A constant value that indicates a control is in a mixed state, neither on nor off.
+    Mixed,
+}
+
 #[derive(Debug)]
 pub struct MenuItem {
     inner: Id<NSMenuItem>,
@@ -486,6 +492,7 @@ pub struct MenuItem {
     title: String,
     callback: Option<MenuItemCallback>,
     submenu: Option<Menu>,
+    state: MenuItemState,
 }
 
 impl MenuItem {
@@ -512,7 +519,13 @@ impl MenuItem {
             });
 
             let title = title.to_string();
-            Self { inner, title, callback, submenu }
+            Self {
+                inner,
+                title,
+                callback,
+                submenu,
+                state: MenuItemState::Off,
+            }
         }
     }
 
@@ -534,6 +547,7 @@ impl MenuItem {
                 title: "".to_string(),
                 callback: None,
                 submenu: None,
+                state: MenuItemState::Off,
             }
         }
     }
@@ -552,6 +566,20 @@ impl MenuItem {
             {
                 self.inner.setImage(Some(&*image))
             }
+        }
+    }
+
+    pub fn state(&self) -> &MenuItemState {
+        &self.state
+    }
+
+    pub fn set_state(&mut self, state: MenuItemState) {
+        unsafe {
+            match state {
+                MenuItemState::On => self.inner.setState(NSControlStateValueOn),
+                MenuItemState::Off => self.inner.setState(NSControlStateValueOff),
+                MenuItemState::Mixed => self.inner.setState(NSControlStateValueMixed),
+            };
         }
     }
 }
