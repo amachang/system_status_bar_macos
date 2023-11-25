@@ -373,6 +373,24 @@ impl StatusItem {
             self.title = title.to_string();
         }
     }
+
+    /// Creates a symbol image with the system symbol name and accessibility description you specify,
+    /// then set's this image on the `button` of `NSStatusItem`
+    ///
+    /// See `SF Symbols` app in macOS App Store
+    pub fn set_image_with_system_symbol_name(
+        &mut self,
+        image_named: impl AsRef<str>,
+        accessibility_description: Option<impl AsRef<str>>,
+    ) {
+        unsafe {
+            if let Some(image) =
+                Image::with_system_symbol_name(image_named, accessibility_description)
+            {
+                self.inner.button().map(|b| b.setImage(Some(&*image)));
+            }
+        }
+    }
 }
 
 impl Drop for StatusItem {
@@ -517,6 +535,44 @@ impl MenuItem {
                 callback: None,
                 submenu: None,
             }
+        }
+    }
+
+    /// Creates a symbol image with the system symbol name and accessibility description you specify.
+    ///
+    /// See `SF Symbols` app in macOS App Store
+    pub fn set_image_with_system_symbol_name(
+        &mut self,
+        image_named: impl AsRef<str>,
+        accessibility_description: Option<impl AsRef<str>>,
+    ) {
+        unsafe {
+            if let Some(image) =
+                Image::with_system_symbol_name(image_named, accessibility_description)
+            {
+                self.inner.setImage(Some(&*image))
+            }
+        }
+    }
+}
+
+struct Image {}
+
+impl Image {
+    fn with_system_symbol_name(
+        image_named: impl AsRef<str>,
+        accessibility_description: Option<impl AsRef<str>>,
+    ) -> Option<Id<NSImage>> {
+        unsafe {
+            let accessibility_description = match accessibility_description {
+                Some(description) => NSString::from_str(description.as_ref()),
+                None => NSString::new(),
+            };
+
+            NSImage::imageWithSystemSymbolName_accessibilityDescription(
+                &NSString::from_str(image_named.as_ref()),
+                Some(&*accessibility_description),
+            )
         }
     }
 }
