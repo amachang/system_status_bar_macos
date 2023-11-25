@@ -296,19 +296,12 @@ use objc2::{
 };
 
 use icrate::{
-    Foundation::{
-        NSString,
-    },
     AppKit::{
-        NSEvent,
-        NSStatusBar,
-        NSStatusItem,
-        NSMenu,
-        NSMenuItem,
-        NSApplication,
-        NSEventMaskAny,
+        NSApplication, NSControlStateValueMixed, NSControlStateValueOff, NSControlStateValueOn,
+        NSEvent, NSEventMaskAny, NSImage, NSMenu, NSMenuItem, NSStatusBar, NSStatusItem,
         NSVariableStatusItemLength,
     },
+    Foundation::NSString,
 };
 
 use block2::{
@@ -371,6 +364,24 @@ impl StatusItem {
         unsafe {
             self.inner.button().map(|b| b.setTitle(&NSString::from_str(title)));
             self.title = title.to_string();
+        }
+    }
+
+    /// Creates a symbol image with the system symbol name and accessibility description you specify,
+    /// then set's this image on the `button` of `NSStatusItem`
+    ///
+    /// See `SF Symbols` app in macOS App Store
+    pub fn set_image_with_system_symbol_name(
+        &mut self,
+        image_named: impl AsRef<str>,
+        accessibility_description: Option<impl AsRef<str>>,
+    ) {
+        unsafe {
+            if let Some(image) =
+                Image::with_system_symbol_name(image_named, accessibility_description)
+            {
+                self.inner.button().map(|b| b.setImage(Some(&*image)));
+            }
         }
     }
 }
@@ -461,6 +472,19 @@ impl STBMenuItemCallback {
     }
 }
 
+/// See `NSControl.StateValue`
+#[derive(Debug)]
+pub enum MenuItemState {
+    /// A constant value that indicates a control is on or selected.
+    On,
+
+    /// A constant value that indicates a control is off or unselected.
+    Off,
+
+    /// A constant value that indicates a control is in a mixed state, neither on nor off.
+    Mixed,
+}
+
 #[derive(Debug)]
 pub struct MenuItem {
     inner: Id<NSMenuItem>,
@@ -468,6 +492,7 @@ pub struct MenuItem {
     title: String,
     callback: Option<MenuItemCallback>,
     submenu: Option<Menu>,
+    state: MenuItemState,
 }
 
 impl MenuItem {
@@ -494,7 +519,13 @@ impl MenuItem {
             });
 
             let title = title.to_string();
-            Self { inner, title, callback, submenu }
+            Self {
+                inner,
+                title,
+                callback,
+                submenu,
+                state: MenuItemState::Off,
+            }
         }
     }
 
@@ -504,6 +535,73 @@ impl MenuItem {
 
     pub fn title(&self) -> &str {
         &self.title
+    }
+
+    pub fn separator() -> Self {
+        unsafe {
+            let inner = NSMenuItem::separatorItem();
+
+            Self {
+                inner,
+
+                title: "".to_string(),
+                callback: None,
+                submenu: None,
+                state: MenuItemState::Off,
+            }
+        }
+    }
+
+    /// Creates a symbol image with the system symbol name and accessibility description you specify.
+    ///
+    /// See `SF Symbols` app in macOS App Store
+    pub fn set_image_with_system_symbol_name(
+        &mut self,
+        image_named: impl AsRef<str>,
+        accessibility_description: Option<impl AsRef<str>>,
+    ) {
+        unsafe {
+            if let Some(image) =
+                Image::with_system_symbol_name(image_named, accessibility_description)
+            {
+                self.inner.setImage(Some(&*image))
+            }
+        }
+    }
+
+    pub fn state(&self) -> &MenuItemState {
+        &self.state
+    }
+
+    pub fn set_state(&mut self, state: MenuItemState) {
+        unsafe {
+            match state {
+                MenuItemState::On => self.inner.setState(NSControlStateValueOn),
+                MenuItemState::Off => self.inner.setState(NSControlStateValueOff),
+                MenuItemState::Mixed => self.inner.setState(NSControlStateValueMixed),
+            };
+        }
+    }
+}
+
+struct Image {}
+
+impl Image {
+    fn with_system_symbol_name(
+        image_named: impl AsRef<str>,
+        accessibility_description: Option<impl AsRef<str>>,
+    ) -> Option<Id<NSImage>> {
+        unsafe {
+            let accessibility_description = match accessibility_description {
+                Some(description) => NSString::from_str(description.as_ref()),
+                None => NSString::new(),
+            };
+
+            NSImage::imageWithSystemSymbolName_accessibilityDescription(
+                &NSString::from_str(image_named.as_ref()),
+                Some(&*accessibility_description),
+            )
+        }
     }
 }
 
