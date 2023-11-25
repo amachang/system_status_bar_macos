@@ -505,6 +505,20 @@ impl MenuItem {
     pub fn title(&self) -> &str {
         &self.title
     }
+
+    pub fn separator() -> Self {
+        unsafe {
+            let inner = NSMenuItem::separatorItem();
+
+            Self {
+                inner,
+
+                title: "".to_string(),
+                callback: None,
+                submenu: None,
+            }
+        }
+    }
 }
 
 impl Drop for MenuItem {
