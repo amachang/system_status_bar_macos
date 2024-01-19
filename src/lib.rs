@@ -296,19 +296,12 @@ use objc2::{
 };
 
 use icrate::{
-    Foundation::{
-        NSString,
-    },
     AppKit::{
-        NSEvent,
-        NSStatusBar,
-        NSStatusItem,
-        NSMenu,
-        NSMenuItem,
-        NSApplication,
-        NSEventMaskAny,
+        NSApplication, NSControlStateValueMixed, NSControlStateValueOff, NSControlStateValueOn,
+        NSEvent, NSEventMaskAny, NSImage, NSMenu, NSMenuItem, NSStatusBar, NSStatusItem,
         NSVariableStatusItemLength,
     },
+    Foundation::NSString,
 };
 
 use block2::{
@@ -371,6 +364,15 @@ impl StatusItem {
         unsafe {
             self.inner.button().map(|b| b.setTitle(&NSString::from_str(title)));
             self.title = title.to_string();
+        }
+    }
+
+    pub fn set_image(
+        &mut self,
+        image: Image,
+    ) {
+        unsafe {
+            self.inner.button().map(|b| b.setImage(Some(&*image.inner)));
         }
     }
 }
@@ -461,6 +463,19 @@ impl STBMenuItemCallback {
     }
 }
 
+/// See `NSControl.StateValue`
+#[derive(Debug)]
+pub enum ControlState {
+    /// A constant value that indicates a control is on or selected.
+    On,
+
+    /// A constant value that indicates a control is off or unselected.
+    Off,
+
+    /// A constant value that indicates a control is in a mixed state, neither on nor off.
+    Mixed,
+}
+
 #[derive(Debug)]
 pub struct MenuItem {
     inner: Id<NSMenuItem>,
@@ -468,6 +483,7 @@ pub struct MenuItem {
     title: String,
     callback: Option<MenuItemCallback>,
     submenu: Option<Menu>,
+    control_state: ControlState,
 }
 
 impl MenuItem {
@@ -494,7 +510,13 @@ impl MenuItem {
             });
 
             let title = title.to_string();
-            Self { inner, title, callback, submenu }
+            Self {
+                inner,
+                title,
+                callback,
+                submenu,
+                control_state: ControlState::Off,
+            }
         }
     }
 
@@ -504,6 +526,70 @@ impl MenuItem {
 
     pub fn title(&self) -> &str {
         &self.title
+    }
+
+    pub fn separator() -> Self {
+        unsafe {
+            let inner = NSMenuItem::separatorItem();
+
+            Self {
+                inner,
+
+                title: "".to_string(),
+                callback: None,
+                submenu: None,
+                control_state: ControlState::Off,
+            }
+        }
+    }
+
+    pub fn set_image(
+        &mut self,
+        image: Image,
+    ) {
+        unsafe {
+            self.inner.setImage(Some(&*image.inner));
+        }
+    }
+
+    pub fn control_state(&self) -> &ControlState {
+        &self.control_state
+    }
+
+    pub fn set_control_state(&mut self, control_state: ControlState) {
+        unsafe {
+            match control_state {
+                ControlState::On => self.inner.setState(NSControlStateValueOn),
+                ControlState::Off => self.inner.setState(NSControlStateValueOff),
+                ControlState::Mixed => self.inner.setState(NSControlStateValueMixed),
+            };
+        }
+    }
+}
+
+pub struct Image {
+    inner: Id<NSImage>
+}
+
+impl Image {
+    /// Creates an image with the system symbol name and accessibility description you specify.
+    ///
+    /// See `SF Symbols` app in macOS App Store
+    pub fn with_system_symbol_name(
+        image_named: impl AsRef<str>,
+        accessibility_description: Option<impl AsRef<str>>,
+    ) -> Option<Self> {
+        unsafe {
+            let accessibility_description = match accessibility_description {
+                Some(description) => NSString::from_str(description.as_ref()),
+                None => NSString::new(),
+            };
+
+            let inner = NSImage::imageWithSystemSymbolName_accessibilityDescription(
+                &NSString::from_str(image_named.as_ref()),
+                Some(&*accessibility_description))?;
+            Some(Self { inner} )
+        }
     }
 }
 
